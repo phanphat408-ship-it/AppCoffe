@@ -54,6 +54,9 @@ class TrackedOrder {
   final DriverInfo driver;
   final String paymentMethodTitle;
 
+  final String customerName;
+  final String customerPhone;
+
   const TrackedOrder({
     required this.orderCode,
     required this.orderTime,
@@ -65,6 +68,8 @@ class TrackedOrder {
     required this.estimatedDeliveryTime,
     this.driver = DriverInfo.defaultDriver,
     this.paymentMethodTitle = 'Chuyển khoản VietQR',
+    this.customerName = 'Nguyễn Văn Khách',
+    this.customerPhone = '0909 123 456',
   });
 
   TrackedOrder copyWith({
@@ -78,6 +83,8 @@ class TrackedOrder {
     String? estimatedDeliveryTime,
     DriverInfo? driver,
     String? paymentMethodTitle,
+    String? customerName,
+    String? customerPhone,
   }) {
     return TrackedOrder(
       orderCode: orderCode ?? this.orderCode,
@@ -90,6 +97,8 @@ class TrackedOrder {
       estimatedDeliveryTime: estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       driver: driver ?? this.driver,
       paymentMethodTitle: paymentMethodTitle ?? this.paymentMethodTitle,
+      customerName: customerName ?? this.customerName,
+      customerPhone: customerPhone ?? this.customerPhone,
     );
   }
 }

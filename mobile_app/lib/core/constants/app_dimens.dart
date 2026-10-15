@@ -21,6 +21,7 @@ class AppDimens {
   static const double r12 = 12.0;
   static const double r14 = 14.0;
   static const double r16 = 16.0; // Chuẩn theo thiết kế cho Buttons & Cards
+  static const double r18 = 18.0;
   static const double r20 = 20.0;
   static const double r24 = 24.0;
   static const double rFull = 999.0;

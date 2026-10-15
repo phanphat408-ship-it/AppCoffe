@@ -7,8 +7,12 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_routes.dart';
 import '../../../auth/presentation/controllers/auth_notifier.dart';
 import '../../../cart/data/models/checkout_models.dart';
+import '../../../orders/data/models/order_tracking_model.dart';
 import '../../../orders/presentation/controllers/order_tracking_notifier.dart';
 import '../controllers/favorites_notifier.dart';
+import '../widgets/admin_menu_management_sheet.dart';
+import '../widgets/admin_order_management_sheet.dart';
+import '../widgets/admin_reports_sheet.dart';
 import '../widgets/app_settings_sheet.dart';
 import '../widgets/change_password_dialog.dart';
 import '../widgets/edit_profile_sheet.dart';
@@ -18,7 +22,7 @@ import '../widgets/order_history_sheet.dart';
 import '../widgets/saved_addresses_sheet.dart';
 import '../widgets/support_center_sheet.dart';
 
-/// Màn hình Hồ sơ cá nhân (Profile Screen) chuyên nghiệp chuẩn Grab/Be
+/// Màn hình Hồ sơ cá nhân (Profile Screen) với Phân quyền Role-based UI và Khu vực Quản trị Admin
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -27,15 +31,22 @@ class ProfileScreen extends ConsumerWidget {
     final authState = ref.watch(authNotifierProvider);
     final user = authState.user;
 
+    // Logic Phân Quyền (Role-based UI):
+    // Người dùng là Admin khi role == 'Admin' hoặc SĐT đăng nhập là 0909000001
+    final cleanPhone = user?.phone.replaceAll(RegExp(r'\D'), '') ?? '';
+    final isAdmin = (user?.role.toLowerCase() == 'admin') || cleanPhone == '0909000001';
+
     final displayName = (user?.name != null && user!.name.isNotEmpty)
         ? user.name
-        : 'Nguyễn Văn An';
+        : (isAdmin ? 'Quản Trị Viên (Admin)' : 'Nguyễn Văn An');
     final displayPhone = (user?.phone != null && user!.phone.isNotEmpty)
         ? user.phone
-        : '0901 234 567';
+        : (isAdmin ? '0909 000 001' : '0901 234 567');
     final displayAvatar = (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
         ? user.avatarUrl!
-        : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500';
+        : (isAdmin
+            ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=500'
+            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500');
 
     final points = user?.points ?? 1250;
     final totalOrders = ref.watch(orderTrackingNotifierProvider).orders.length;
@@ -50,6 +61,45 @@ class ProfileScreen extends ConsumerWidget {
         centerTitle: true,
         title: Text('Hồ Sơ Cá Nhân', style: AppTextStyles.h3),
         automaticallyImplyLeading: false,
+        actions: [
+          // Nút chuyển đổi nhanh vai trò phục vụ demo đồ án
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: ActionChip(
+              avatar: Icon(
+                isAdmin ? Icons.admin_panel_settings_rounded : Icons.person_rounded,
+                size: 16,
+                color: isAdmin ? Colors.white : AppColors.primary,
+              ),
+              label: Text(
+                isAdmin ? 'ADMIN' : 'KHÁCH',
+                style: TextStyle(
+                  color: isAdmin ? Colors.white : AppColors.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              backgroundColor: isAdmin ? const Color(0xFFE65100) : Colors.white,
+              side: BorderSide(
+                color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
+              ),
+              onPressed: () {
+                ref.read(authNotifierProvider.notifier).setDemoUser(isAdmin: !isAdmin);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      !isAdmin
+                          ? '👑 Đã chuyển sang tài khoản Quản Trị Viên (0909000001)'
+                          : '👤 Đã chuyển sang tài khoản Khách Hàng',
+                    ),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: !isAdmin ? const Color(0xFFE65100) : AppColors.primary,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -61,19 +111,27 @@ class ProfileScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(AppDimens.r24),
-                border: Border.all(color: AppColors.lightBorder),
+                border: Border.all(
+                  color: isAdmin
+                      ? const Color(0xFFE65100).withValues(alpha: 0.3)
+                      : AppColors.lightBorder,
+                  width: isAdmin ? 1.5 : 1.0,
+                ),
                 boxShadow: [AppColors.cardShadow],
               ),
               child: Column(
                 children: [
-                  // Avatar tròn với nút icon camera
+                  // Avatar tròn với viền nổi bật
                   Stack(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 2.5),
+                          border: Border.all(
+                            color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
+                            width: 2.5,
+                          ),
                         ),
                         child: CircleAvatar(
                           radius: 44,
@@ -89,8 +147,8 @@ class ProfileScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(AppDimens.rFull),
                           child: Container(
                             padding: const EdgeInsets.all(7),
-                            decoration: const BoxDecoration(
-                              color: AppColors.primary,
+                            decoration: BoxDecoration(
+                              color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -128,136 +186,90 @@ class ProfileScreen extends ConsumerWidget {
                     ],
                   ),
 
+                  // Huy hiệu Quản Trị Viên (Nếu là Admin)
+                  if (isAdmin) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFE65100), Color(0xFFFF8F00)],
+                        ),
+                        borderRadius: BorderRadius.circular(AppDimens.rFull),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFE65100).withValues(alpha: 0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.shield_rounded, size: 13, color: Colors.white),
+                          SizedBox(width: 4),
+                          Text(
+                            'QUẢN TRỊ VIÊN HỆ THỐNG',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 12),
 
                   // Nút Chỉnh sửa hồ sơ
                   OutlinedButton.icon(
                     onPressed: () => EditProfileSheet.show(context),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: AppColors.primary),
+                      side: BorderSide(
+                        color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(AppDimens.rFull),
                       ),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     ),
-                    icon: const Icon(Icons.edit_note_rounded, size: 18, color: AppColors.primary),
+                    icon: Icon(
+                      Icons.edit_note_rounded,
+                      size: 18,
+                      color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
+                    ),
                     label: Text(
                       'Chỉnh sửa hồ sơ',
                       style: AppTextStyles.button.copyWith(
-                        color: AppColors.primary,
+                        color: isAdmin ? const Color(0xFFE65100) : AppColors.primary,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
-
-                  // Thẻ thành viên phong cách GrabRewards / BePoint
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2C241E), Color(0xFF4A3E36)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(AppDimens.r16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.stars_rounded, color: Color(0xFFFFD700), size: 22),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'Aroma Coffee Rewards',
-                                  style: AppTextStyles.subtitle.copyWith(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    letterSpacing: 0.3,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFD700).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(AppDimens.rFull),
-                                border: Border.all(color: const Color(0xFFFFD700), width: 1),
-                              ),
-                              child: const Text(
-                                '👑 HẠNG VÀNG',
-                                style: TextStyle(
-                                  color: Color(0xFFFFD700),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Điểm tích lũy hiện tại',
-                                  style: AppTextStyles.caption.copyWith(color: Colors.white70, fontSize: 11),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '$points Điểm',
-                                  style: AppTextStyles.h3.copyWith(
-                                    color: const Color(0xFFFFD700),
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              'Còn 750 điểm lên Kim Cương',
-                              style: AppTextStyles.caption.copyWith(color: Colors.white60, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(AppDimens.rFull),
-                          child: const LinearProgressIndicator(
-                            value: 1250 / 2000,
-                            backgroundColor: Colors.white24,
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-                            minHeight: 6,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  // Yêu cầu 1: Ẩn đi thẻ "Aroma Coffee Rewards" khi là Admin
+                  if (!isAdmin) ...[
+                    const SizedBox(height: 16),
+                    _buildRewardsCard(points),
+                  ],
                 ],
               ),
             ),
 
-            const SizedBox(height: 16),
+            // Yêu cầu 1 & 2: Chèn thêm danh mục mới nổi bật "⚙️ KHU VỰC QUẢN TRỊ CỬA HÀNG" ngay dưới phần thông tin cá nhân
+            if (isAdmin) ...[
+              const SizedBox(height: 18),
+              _buildAdminSection(context, ref),
+            ],
 
-            // 2. Thống kê nhanh: Đơn hàng | Yêu thích | Voucher
+            const SizedBox(height: 18),
+
+            // Thống kê nhanh: Đơn hàng | Yêu thích | Voucher
             Row(
               children: [
                 Expanded(
@@ -294,7 +306,7 @@ class ProfileScreen extends ConsumerWidget {
 
             const SizedBox(height: 18),
 
-            // 3. Nhóm danh mục chức năng chính (Tất cả đều hoạt động 100%)
+            // Yêu cầu 3: Đảm bảo các chức năng thông thường của khách hàng vẫn nằm ở phía dưới để Admin có thể test app
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -365,7 +377,7 @@ class ProfileScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // 4. Nút ĐĂNG XUẤT màu đỏ nổi bật
+            // Nút ĐĂNG XUẤT
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -397,6 +409,299 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Giao diện Khu Vực Quản Trị Cửa Hàng (Yêu cầu 1 & 2)
+  Widget _buildAdminSection(BuildContext context, WidgetRef ref) {
+    final pendingCount = ref
+        .watch(orderTrackingNotifierProvider)
+        .orders
+        .where((o) => o.currentStep == OrderStep.received)
+        .length;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppDimens.r20),
+        border: Border.all(
+          color: const Color(0xFFE65100).withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFE65100).withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Banner tiêu đề nổi bật "⚙️ KHU VỰC QUẢN TRỊ CỬA HÀNG"
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF2C241E), Color(0xFF3E2723)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.r18)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.admin_panel_settings_rounded,
+                        color: Color(0xFFFFD700),
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '⚙️ KHU VỰC QUẢN TRỊ CỬA HÀNG',
+                      style: AppTextStyles.subtitle.copyWith(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE65100),
+                    borderRadius: BorderRadius.circular(AppDimens.rFull),
+                  ),
+                  child: const Text(
+                    'QUẢN LÝ',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // 3 Nút chức năng (ListTile) dành riêng cho quản lý:
+          // 1. "📦 Quản lý Đơn hàng" (Duyệt đơn và cập nhật trạng thái)
+          _buildAdminMenuItem(
+            icon: Icons.inventory_2_rounded,
+            iconColor: const Color(0xFF2E7D32),
+            title: '📦 Quản lý Đơn hàng',
+            subtitle: 'Duyệt đơn và cập nhật trạng thái',
+            badgeText: pendingCount > 0 ? '$pendingCount chờ duyệt' : 'Hoạt động',
+            badgeColor: pendingCount > 0 ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
+            onTap: () => AdminOrderManagementSheet.show(context),
+          ),
+          const Divider(height: 1, indent: 56, color: AppColors.divider),
+
+          // 2. "🍔 Quản lý Thực đơn" (Thêm/Sửa/Xóa/Ẩn món)
+          _buildAdminMenuItem(
+            icon: Icons.restaurant_menu_rounded,
+            iconColor: const Color(0xFFE65100),
+            title: '🍔 Quản lý Thực đơn',
+            subtitle: 'Thêm/Sửa/Xóa/Ẩn món',
+            badgeText: 'Thực đơn',
+            badgeColor: const Color(0xFFE65100),
+            onTap: () => AdminMenuManagementSheet.show(context),
+          ),
+          const Divider(height: 1, indent: 56, color: AppColors.divider),
+
+          // 3. "📊 Thống kê & Báo cáo" (Xem doanh thu)
+          _buildAdminMenuItem(
+            icon: Icons.bar_chart_rounded,
+            iconColor: const Color(0xFF1976D2),
+            title: '📊 Thống kê & Báo cáo',
+            subtitle: 'Xem doanh thu',
+            badgeText: 'Doanh số',
+            badgeColor: const Color(0xFF1976D2),
+            onTap: () => AdminReportsSheet.show(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAdminMenuItem({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    String? badgeText,
+    Color? badgeColor,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+        leading: Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(AppDimens.r12),
+          ),
+          child: Icon(icon, color: iconColor, size: 21),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                title,
+                style: AppTextStyles.subtitle.copyWith(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            if (badgeText != null)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: (badgeColor ?? iconColor).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimens.rFull),
+                  border: Border.all(
+                    color: (badgeColor ?? iconColor).withValues(alpha: 0.35),
+                  ),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    color: badgeColor ?? iconColor,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        subtitle: Text(
+          subtitle,
+          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary, fontSize: 11.5),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios_rounded,
+          size: 15,
+          color: AppColors.textSecondary,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRewardsCard(int points) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF2C241E), Color(0xFF4A3E36)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppDimens.r16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.stars_rounded, color: Color(0xFFFFD700), size: 22),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Aroma Coffee Rewards',
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(AppDimens.rFull),
+                  border: Border.all(color: const Color(0xFFFFD700), width: 1),
+                ),
+                child: const Text(
+                  '👑 HẠNG VÀNG',
+                  style: TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Điểm tích lũy hiện tại',
+                    style: AppTextStyles.caption.copyWith(color: Colors.white70, fontSize: 11),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$points Điểm',
+                    style: AppTextStyles.h3.copyWith(
+                      color: const Color(0xFFFFD700),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                'Còn 750 điểm lên Kim Cương',
+                style: AppTextStyles.caption.copyWith(color: Colors.white60, fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(AppDimens.rFull),
+            child: const LinearProgressIndicator(
+              value: 1250 / 2000,
+              backgroundColor: Colors.white24,
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+              minHeight: 6,
+            ),
+          ),
+        ],
       ),
     );
   }

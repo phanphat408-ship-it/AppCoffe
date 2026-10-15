@@ -83,13 +83,19 @@ class OrderTrackingNotifier extends Notifier<OrderTrackingState> {
 
   @override
   OrderTrackingState build() {
+    var isDisposed = false;
     ref.onDispose(() {
+      isDisposed = true;
       _simulationTimer?.cancel();
       _countdownTimer?.cancel();
     });
 
     // Tự động bật chế độ Demo mô phỏng (Hiệu ứng siêu ứng dụng)
-    Future.microtask(() => startSimulation());
+    Future.microtask(() {
+      if (!isDisposed) {
+        startSimulation();
+      }
+    });
 
     return OrderTrackingState(orders: _initialOrders);
   }
@@ -194,5 +200,47 @@ class OrderTrackingNotifier extends Notifier<OrderTrackingState> {
     final active = state.orders.first.copyWith(currentStep: step);
     final updatedList = [active, ...state.orders.sublist(1)];
     state = state.copyWith(orders: updatedList);
+  }
+
+  /// Cập nhật trạng thái cho một đơn hàng cụ thể theo mã đơn (Quản trị viên duyệt đơn)
+  void updateOrderStep(String orderCode, OrderStep step) {
+    final index = state.orders.indexWhere((o) => o.orderCode == orderCode);
+    if (index == -1) return;
+
+    final updated = state.orders[index].copyWith(currentStep: step);
+    final list = List<TrackedOrder>.from(state.orders);
+    list[index] = updated;
+    state = state.copyWith(orders: list);
+  }
+
+  /// Thêm đơn hàng giả lập đang chờ xử lý mới (Dùng demo thuyết trình cho Admin)
+  void addMockPendingOrder() {
+    final randId = 10000 + DateTime.now().millisecondsSinceEpoch % 90000;
+    final newOrder = TrackedOrder(
+      orderCode: 'CF$randId',
+      orderTime: DateTime.now(),
+      branchName: 'Chi Nhánh Quận 1 - Nguyễn Huệ',
+      deliveryAddress: '24 Lê Lợi, Bến Nghé, Quận 1, TP.HCM',
+      customerName: 'Trần Thị Mỹ Linh',
+      customerPhone: '0938 889 999',
+      items: const [
+        OrderItemSummary(
+          name: 'Trà Đào Cam Sả Tươi (Size L)',
+          quantity: 2,
+          price: 90000,
+        ),
+        OrderItemSummary(
+          name: 'Bánh Mì Chảo Đặc Biệt',
+          quantity: 1,
+          price: 45000,
+        ),
+      ],
+      totalAmount: 150000,
+      currentStep: OrderStep.received,
+      estimatedDeliveryTime: '20 - 25 phút',
+      paymentMethodTitle: 'Chuyển khoản VietQR',
+    );
+
+    state = state.copyWith(orders: [newOrder, ...state.orders]);
   }
 }

@@ -113,7 +113,104 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
 
-                const SizedBox(height: AppDimens.p32),
+                const SizedBox(height: AppDimens.p16),
+
+                // Tài khoản thử nghiệm nhanh (Hỗ trợ demo báo cáo đồ án)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppDimens.r12),
+                    border: Border.all(color: AppColors.lightBorder),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Demo:',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: [
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _phoneController.text = '0909000001';
+                                  _passwordController.text = 'Admin@123';
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(AppDimens.r8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE65100).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(AppDimens.r8),
+                                  border: Border.all(color: const Color(0xFFE65100).withValues(alpha: 0.4)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.shield_rounded, size: 13, color: Color(0xFFE65100)),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '👑 Admin (0909000001)',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFFE65100),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _phoneController.text = '0909123456';
+                                  _passwordController.text = '123456';
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(AppDimens.r8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: AppColors.secondary.withValues(alpha: 0.4),
+                                  borderRadius: BorderRadius.circular(AppDimens.r8),
+                                  border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.person_rounded, size: 13, color: AppColors.primary),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      '👤 Khách hàng',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: AppDimens.p16),
 
                 // 3. Form Input với Validation
                 AppTextField(
