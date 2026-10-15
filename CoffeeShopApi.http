@@ -1,0 +1,168 @@
+@CoffeeShopApi_HostAddress = http://localhost:5108
+@authToken = 
+
+### 1. Đăng ký tài khoản khách hàng mới
+POST {{CoffeeShopApi_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "name": "Nguyễn Hoàng Nam",
+  "phone": "0912345678",
+  "password": "Password@123",
+  "role": "Customer"
+}
+
+### 2. Đăng nhập để nhận JWT Token
+# @name login
+POST {{CoffeeShopApi_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "0912345678",
+  "password": "Password@123"
+}
+
+### Đăng nhập bằng tài khoản Admin mặc định (đã được seed sẵn)
+# @name loginAdmin
+POST {{CoffeeShopApi_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "0909000001",
+  "password": "Admin@123"
+}
+
+### 3. Lấy thông tin cá nhân hiện tại ([Authorize])
+GET {{CoffeeShopApi_HostAddress}}/api/auth/me
+Authorization: Bearer {{login.response.body.data.token}}
+
+### -------------------------------------------------------------
+### SẢN PHẨM & DANH MỤC (Products & Categories)
+### -------------------------------------------------------------
+
+### 4. Lấy tất cả danh mục
+GET {{CoffeeShopApi_HostAddress}}/api/categories
+Accept: application/json
+
+### 5. Lấy danh sách sản phẩm (có tìm kiếm & lọc)
+GET {{CoffeeShopApi_HostAddress}}/api/products?search=cà phê&onlyAvailable=true
+Accept: application/json
+
+### 6. Lấy chi tiết sản phẩm theo ID
+GET {{CoffeeShopApi_HostAddress}}/api/products/1
+Accept: application/json
+
+### 7. Thêm sản phẩm mới ([Authorize - Admin/Staff])
+POST {{CoffeeShopApi_HostAddress}}/api/products
+Authorization: Bearer {{loginAdmin.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "name": "Trà Sữa Oolong Nướng",
+  "description": "Trà Oolong đậm vị ủ thơm phức phối hợp lớp trân châu đường đen dẻo dai.",
+  "price": 45000,
+  "imageUrl": "https://images.unsplash.com/photo-1558857563-b37fe63ef705?w=500",
+  "categoryId": 3,
+  "isAvailable": true
+}
+
+### 8. Cập nhật sản phẩm ([Authorize - Admin/Staff])
+PUT {{CoffeeShopApi_HostAddress}}/api/products/1
+Authorization: Bearer {{loginAdmin.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "name": "Cà Phê Sữa Đá Sài Gòn (Đặc Biệt)",
+  "description": "Robusta Buôn Ma Thuột hảo hạng pha phin truyền thống.",
+  "price": 32000,
+  "imageUrl": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500",
+  "categoryId": 1,
+  "isAvailable": true
+}
+
+### -------------------------------------------------------------
+### GIỎ HÀNG (Cart) - Tất cả yêu cầu [Authorize]
+### -------------------------------------------------------------
+
+### 9. Thêm món vào giỏ hàng
+POST {{CoffeeShopApi_HostAddress}}/api/cart
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "quantity": 2
+}
+
+### 10. Xem giỏ hàng hiện tại
+GET {{CoffeeShopApi_HostAddress}}/api/cart
+Authorization: Bearer {{login.response.body.data.token}}
+
+### 11. Cập nhật số lượng món trong giỏ hàng (thay ID item tương ứng)
+PUT {{CoffeeShopApi_HostAddress}}/api/cart/1
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+### 12. Xóa 1 món khỏi giỏ hàng
+DELETE {{CoffeeShopApi_HostAddress}}/api/cart/1
+Authorization: Bearer {{login.response.body.data.token}}
+
+### -------------------------------------------------------------
+### ĐƠN HÀNG (Orders) - Bắt buộc [Authorize]
+### -------------------------------------------------------------
+
+### 13. Tạo đơn hàng mới từ giỏ hàng hoặc chọn trực tiếp món
+POST {{CoffeeShopApi_HostAddress}}/api/orders
+Authorization: Bearer {{login.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "branchId": 1,
+  "deliveryType": "Delivery",
+  "shippingAddress": "123 Đường Hai Bà Trưng, Phường Bến Nghé, Quận 1, TP.HCM",
+  "contactPhone": "0912345678",
+  "note": "Ít ngọt, nhiều đá giúp mình nhé!",
+  "items": [
+    {
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "productId": 6,
+      "quantity": 1
+    }
+  ]
+}
+
+### 14. Xem danh sách đơn hàng
+GET {{CoffeeShopApi_HostAddress}}/api/orders
+Authorization: Bearer {{login.response.body.data.token}}
+
+### 15. Xem chi tiết đơn hàng theo ID
+GET {{CoffeeShopApi_HostAddress}}/api/orders/1
+Authorization: Bearer {{login.response.body.data.token}}
+
+### 16. Cập nhật trạng thái đơn hàng ([Authorize - Admin/Staff])
+PUT {{CoffeeShopApi_HostAddress}}/api/orders/1/status
+Authorization: Bearer {{loginAdmin.response.body.data.token}}
+Content-Type: application/json
+
+{
+  "status": "Preparing"
+}
+
+### 17. Khách hàng hủy đơn hàng đang chờ xác nhận
+PUT {{CoffeeShopApi_HostAddress}}/api/orders/1/cancel
+Authorization: Bearer {{login.response.body.data.token}}
+
+### -------------------------------------------------------------
+### CHI NHÁNH (Branches)
+### -------------------------------------------------------------
+
+### 18. Xem danh sách chi nhánh
+GET {{CoffeeShopApi_HostAddress}}/api/branches
+Accept: application/json

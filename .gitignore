@@ -1,0 +1,47 @@
+## .NET & Visual Studio
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+_ReSharper*/
+*.suo
+*.userprefs
+*.pidb
+*.booproj
+*.svclog
+*.tss
+
+## Flutter / Dart
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+
+## Android / Gradle
+.gradle/
+**/android/app/build/
+**/android/.gradle/
+**/android/captures/
+**/android/gradleBuild/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+*.apk
+*.aab
+
+## IDE & Editors
+.idea/
+*.iml
+.vscode/
+*.swp
+*~
+
+## OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
