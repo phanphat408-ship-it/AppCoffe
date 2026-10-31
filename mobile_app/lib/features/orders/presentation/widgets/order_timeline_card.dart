@@ -89,69 +89,7 @@ class OrderTimelineCard extends StatelessWidget {
 
           const Divider(height: 1, color: AppColors.divider),
 
-          // 2. Chế độ mô phỏng (Hiệu ứng siêu ứng dụng)
-          if (isLiveOrder)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.secondary.withValues(alpha: 0.25),
-                borderRadius: BorderRadius.circular(AppDimens.r12),
-                border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.bolt_rounded, color: AppColors.primary, size: 18),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      isSimulating
-                          ? 'Đang tự động nhảy bước sau ${countdownSeconds}s...'
-                          : 'Chế độ mô phỏng đang tạm dừng',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  InkWell(
-                    onTap: onToggleSimulation,
-                    borderRadius: BorderRadius.circular(AppDimens.r8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      child: Text(
-                        isSimulating ? 'Tạm dừng' : 'Bật lại',
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  InkWell(
-                    onTap: onNextStepTap,
-                    borderRadius: BorderRadius.circular(AppDimens.r8),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        borderRadius: BorderRadius.circular(AppDimens.r8),
-                      ),
-                      child: Text(
-                        'Bước tiếp >',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-          // 3. Timeline UI 4 bước trực quan
+          // 2. Timeline UI 4 bước trực quan
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
             child: _buildTimeline(order.currentStep),
@@ -320,7 +258,7 @@ class OrderTimelineCard extends StatelessWidget {
                     height: 46,
                     fit: BoxFit.cover,
                     fallbackIcon: Icons.person_rounded,
-                    cacheWidth: 400,
+                    cacheWidth: 100,
                   ),
                 ),
               ),
@@ -348,9 +286,13 @@ class OrderTimelineCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      driver.name,
-                      style: AppTextStyles.subtitle.copyWith(fontSize: 14),
+                    Flexible(
+                      child: Text(
+                        driver.name,
+                        style: AppTextStyles.subtitle.copyWith(fontSize: 14),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(width: 6),
                     Container(
@@ -374,18 +316,24 @@ class OrderTimelineCard extends StatelessWidget {
                 Text(
                   '${driver.vehicleModel} • ${driver.licensePlate}',
                   style: AppTextStyles.caption.copyWith(fontSize: 11),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     const Icon(Icons.star_rounded, color: AppColors.rating, size: 14),
                     const SizedBox(width: 2),
-                    Text(
-                      '${driver.rating} (${driver.totalTrips}+ chuyến)',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11,
+                    Expanded(
+                      child: Text(
+                        '${driver.rating} (${driver.totalTrips}+ chuyến)',
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -393,6 +341,7 @@ class OrderTimelineCard extends StatelessWidget {
               ],
             ),
           ),
+          const SizedBox(width: 8),
 
           // Nút Gọi điện & Nhắn tin
           Row(
@@ -478,9 +427,9 @@ class OrderTimelineCard extends StatelessWidget {
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(AppDimens.r12),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisSize: MainAxisSize.min,
-                children: const [
+                children: [
                   Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
                   SizedBox(width: 6),
                   Text('00:03 - Đang đàm thoại', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
@@ -658,7 +607,7 @@ class _DriverChatModal extends StatefulWidget {
 class _DriverChatModalState extends State<_DriverChatModal> {
   final List<({String text, bool isMe, String time})> _messages = [
     (
-      text: 'Chào bạn! Em là Hùng tài xế Xanh SM. Em vừa nhận đơn của quán và đang đi giao tới bạn nhé!',
+      text: 'Chào bạn! Em là Sinh tài xế Xanh SM. Em vừa nhận đơn của quán và đang đi giao tới bạn nhé!',
       isMe: false,
       time: '12:02'
     ),
@@ -803,7 +752,7 @@ class _DriverChatModalState extends State<_DriverChatModal> {
                 return ActionChip(
                   label: Text(reply, style: const TextStyle(fontSize: 11)),
                   backgroundColor: AppColors.background,
-                  side: BorderSide(color: AppColors.lightBorder),
+                  side: const BorderSide(color: AppColors.lightBorder),
                   onPressed: () => _sendMessage(reply),
                 );
               },
@@ -828,7 +777,7 @@ class _DriverChatModalState extends State<_DriverChatModal> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimens.rFull),
-                        borderSide: BorderSide(color: AppColors.lightBorder),
+                        borderSide: const BorderSide(color: AppColors.lightBorder),
                       ),
                     ),
                     onSubmitted: _sendMessage,

@@ -138,11 +138,11 @@ class _VoucherSelectionSheetState extends State<VoucherSelectionSheet> {
                       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimens.r12),
-                        borderSide: BorderSide(color: AppColors.lightBorder),
+                        borderSide: const BorderSide(color: AppColors.lightBorder),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimens.r12),
-                        borderSide: BorderSide(color: AppColors.lightBorder),
+                        borderSide: const BorderSide(color: AppColors.lightBorder),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppDimens.r12),

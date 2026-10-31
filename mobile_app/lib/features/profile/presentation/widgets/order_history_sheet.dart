@@ -47,7 +47,7 @@ class _OrderHistorySheetState extends ConsumerState<OrderHistorySheet>
 
   @override
   Widget build(BuildContext context) {
-    final activeOrders = ref.watch(orderTrackingNotifierProvider).orders;
+    final activeOrders = ref.watch(orderTrackingNotifierProvider.select((s) => s.orders));
 
     // Phân loại đơn: Đang xử lý (bước != completed), Đã hoàn thành (bước == completed)
     final processingOrders =

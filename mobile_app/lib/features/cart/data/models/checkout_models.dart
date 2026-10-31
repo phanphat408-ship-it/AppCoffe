@@ -134,8 +134,8 @@ class DriverInfo {
   });
 
   static const DriverInfo defaultDriver = DriverInfo(
-    name: 'Nguyễn Văn Hùng',
-    phone: '0908 123 456',
+    name: 'Nguyễn Gia Sinh',
+    phone: '0909564613',
     licensePlate: '59-X3 888.68',
     vehicleModel: 'VinFast Feliz S (Xanh Lục Bảo)',
     serviceBrand: 'Xanh SM Bike 🛵',
@@ -144,4 +144,28 @@ class DriverInfo {
     totalTrips: 1420,
     avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
   );
+
+  DriverInfo copyWith({
+    String? name,
+    String? phone,
+    String? licensePlate,
+    String? vehicleModel,
+    String? serviceBrand,
+    Color? brandColor,
+    double? rating,
+    int? totalTrips,
+    String? avatarUrl,
+  }) {
+    return DriverInfo(
+      name: name ?? this.name,
+      phone: phone ?? this.phone,
+      licensePlate: licensePlate ?? this.licensePlate,
+      vehicleModel: vehicleModel ?? this.vehicleModel,
+      serviceBrand: serviceBrand ?? this.serviceBrand,
+      brandColor: brandColor ?? this.brandColor,
+      rating: rating ?? this.rating,
+      totalTrips: totalTrips ?? this.totalTrips,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+    );
+  }
 }

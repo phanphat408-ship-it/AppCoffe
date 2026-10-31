@@ -364,6 +364,7 @@ class _AdminMenuManagementSheetState extends State<AdminMenuManagementSheet> {
                   width: 70,
                   height: 70,
                   fit: BoxFit.cover,
+                  cacheWidth: 150,
                   errorBuilder: (context, error, stackTrace) => Container(
                     width: 70,
                     height: 70,

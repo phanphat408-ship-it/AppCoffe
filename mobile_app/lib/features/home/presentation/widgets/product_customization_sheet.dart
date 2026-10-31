@@ -178,7 +178,7 @@ class _ProductCustomizationSheetState
                       height: 76,
                       fit: BoxFit.cover,
                       fallbackIcon: Icons.local_cafe_rounded,
-                      cacheWidth: 700,
+                      cacheWidth: 160,
                     ),
                   ),
                 ),
@@ -336,11 +336,11 @@ class _ProductCustomizationSheetState
                     fillColor: AppColors.background,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppDimens.r12),
-                      borderSide: BorderSide(color: AppColors.lightBorder),
+                      borderSide: const BorderSide(color: AppColors.lightBorder),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppDimens.r12),
-                      borderSide: BorderSide(color: AppColors.lightBorder),
+                      borderSide: const BorderSide(color: AppColors.lightBorder),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(AppDimens.r12),

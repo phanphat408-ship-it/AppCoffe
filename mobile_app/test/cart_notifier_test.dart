@@ -51,6 +51,11 @@ class _FakeOrderRepository implements OrderRepository {
       createdAt: DateTime(2026),
     );
   }
+
+  @override
+  Future<bool> updateOrderStatus(int orderId, String status) async {
+    return true;
+  }
 }
 
 void main() {

@@ -119,7 +119,7 @@ public class AuthService : IAuthService
 
     public async Task<ApiResponse<UserDto>> GetCurrentUserAsync(int userId)
     {
-        var user = await _unitOfWork.Users.GetByIdAsync(userId);
+        var user = await _unitOfWork.Users.GetByIdAsync(userId, asNoTracking: true);
         if (user == null)
         {
             return ApiResponse<UserDto>.Fail("Không tìm thấy thông tin người dùng.");

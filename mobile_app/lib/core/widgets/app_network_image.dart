@@ -60,6 +60,10 @@ class _AppNetworkImageState extends State<AppNetworkImage>
     final cleanUrl = widget.imageUrl.trim();
     final isUrlInvalid = cleanUrl.isEmpty || !cleanUrl.startsWith('http');
 
+    // Tự động tính toán cacheWidth thông minh dựa theo kích thước hiển thị thực tế (tránh nạp ảnh gốc tốn RAM)
+    final int effectiveCacheWidth = widget.cacheWidth ??
+        (widget.width != null ? (widget.width! * 2.5).round().clamp(60, 800) : 400);
+
     Widget content;
 
     if (isUrlInvalid) {
@@ -70,7 +74,7 @@ class _AppNetworkImageState extends State<AppNetworkImage>
         width: widget.width,
         height: widget.height,
         fit: widget.fit,
-        cacheWidth: widget.cacheWidth ?? 400,
+        cacheWidth: effectiveCacheWidth,
         cacheHeight: widget.cacheHeight,
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) {

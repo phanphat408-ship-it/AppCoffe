@@ -15,7 +15,9 @@ public class ProductRepository : Repository<Product>, IProductRepository
         string? search, 
         decimal? minPrice, 
         decimal? maxPrice, 
-        bool onlyAvailable = false)
+        bool onlyAvailable = false,
+        int? page = null,
+        int? pageSize = null)
     {
         var query = _dbSet.Include(p => p.Category).AsNoTracking().AsQueryable();
 
@@ -46,12 +48,32 @@ public class ProductRepository : Repository<Product>, IProductRepository
             query = query.Where(p => p.IsAvailable);
         }
 
-        return await query.OrderByDescending(p => p.Id).ToListAsync();
+        query = query.OrderByDescending(p => p.Id);
+
+        if (page.HasValue && page.Value > 0 && pageSize.HasValue && pageSize.Value > 0)
+        {
+            query = query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value);
+        }
+
+        return await query.ToListAsync();
     }
 
-    public async Task<Product?> GetByIdWithCategoryAsync(int id)
+    public async Task<Product?> GetByIdWithCategoryAsync(int id, bool asNoTracking = false)
     {
-        return await _dbSet.Include(p => p.Category)
-                           .FirstOrDefaultAsync(p => p.Id == id);
+        var query = _dbSet.Include(p => p.Category).AsQueryable();
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+        return await query.FirstOrDefaultAsync(p => p.Id == id);
+    }
+
+    public async Task<IReadOnlyDictionary<int, int>> GetProductCountsByCategoryAsync()
+    {
+        return await _dbSet
+            .AsNoTracking()
+            .GroupBy(p => p.CategoryId)
+            .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
     }
 }

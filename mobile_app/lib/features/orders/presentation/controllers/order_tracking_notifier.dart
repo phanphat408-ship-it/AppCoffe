@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../cart/data/models/order_models.dart';
+import '../../../cart/data/repositories/order_repository.dart';
 import '../../data/models/order_tracking_model.dart';
 
 class OrderTrackingState {
@@ -10,8 +12,8 @@ class OrderTrackingState {
 
   const OrderTrackingState({
     required this.orders,
-    this.isSimulating = true,
-    this.countdownSeconds = 6,
+    this.isSimulating = false,
+    this.countdownSeconds = 0,
   });
 
   TrackedOrder? get activeOrder =>
@@ -78,26 +80,25 @@ class OrderTrackingNotifier extends Notifier<OrderTrackingState> {
       currentStep: OrderStep.completed,
       estimatedDeliveryTime: 'Đã giao',
       paymentMethodTitle: 'Tiền mặt (COD)',
+      driverName: 'Nguyễn Gia Sinh',
+      driverPhone: '0909564613',
+      paymentStatus: 'Paid',
     ),
   ];
 
   @override
   OrderTrackingState build() {
-    var isDisposed = false;
     ref.onDispose(() {
-      isDisposed = true;
       _simulationTimer?.cancel();
       _countdownTimer?.cancel();
     });
 
-    // Tự động bật chế độ Demo mô phỏng (Hiệu ứng siêu ứng dụng)
-    Future.microtask(() {
-      if (!isDisposed) {
-        startSimulation();
-      }
-    });
-
-    return OrderTrackingState(orders: _initialOrders);
+    // TRIỆT TIÊU HOÀN TOÀN: Không bật bất kỳ timer tự động nhảy bước nào
+    return const OrderTrackingState(
+      orders: [],
+      isSimulating: false,
+      countdownSeconds: 0,
+    ).copyWith(orders: _initialOrders);
   }
 
   /// Thêm đơn hàng vừa đặt từ Checkout lên đầu danh sách theo dõi
@@ -126,91 +127,176 @@ class OrderTrackingNotifier extends Notifier<OrderTrackingState> {
       currentStep: OrderStep.received,
       estimatedDeliveryTime: '15 - 20 phút',
       paymentMethodTitle: result.paymentMethodTitle,
+      driverName: result.driverName,
+      driverPhone: result.driverPhone,
+      paymentStatus: result.paymentStatus,
     );
 
+    // Không tự động mô phỏng - Đơn hàng giữ nguyên trạng thái "Đã nhận đơn" cho đến khi Admin duyệt
     state = state.copyWith(
       orders: [newTrackedOrder, ...state.orders],
-      countdownSeconds: 6,
+      isSimulating: false,
+      countdownSeconds: 0,
     );
-    startSimulation();
   }
 
-  /// Bắt đầu giả lập tự động nhảy bước trạng thái sau mỗi 6 giây
+  /// Vô hiệu hóa chế độ giả lập tự động - Trạng thái đơn CHỈ thay đổi khi Admin bấm nút thủ công
   void startSimulation() {
     _simulationTimer?.cancel();
     _countdownTimer?.cancel();
-
-    state = state.copyWith(isSimulating: true, countdownSeconds: 6);
-
-    // Đếm ngược từng giây hiển thị trên UI
-    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (state.countdownSeconds <= 1) {
-        state = state.copyWith(countdownSeconds: 6);
-      } else {
-        state = state.copyWith(countdownSeconds: state.countdownSeconds - 1);
-      }
-    });
-
-    // Cứ sau 6 giây tự động nhảy bước tuần tự
-    _simulationTimer = Timer.periodic(const Duration(seconds: 6), (timer) {
-      advanceStep();
-    });
+    state = state.copyWith(isSimulating: false, countdownSeconds: 0);
   }
 
-  /// Tạm dừng hiệu ứng tự động
   void pauseSimulation() {
     _simulationTimer?.cancel();
     _countdownTimer?.cancel();
-    state = state.copyWith(isSimulating: false);
+    state = state.copyWith(isSimulating: false, countdownSeconds: 0);
   }
 
-  /// Bật/tắt chế độ tự động nhảy bước
   void toggleSimulation() {
-    if (state.isSimulating) {
-      pauseSimulation();
-    } else {
-      startSimulation();
-    }
+    // Không làm gì - Đã tắt hoàn toàn tính năng tự động nhảy bước
+    debugPrint('>> Auto-simulation has been disabled per business rules.');
   }
 
-  /// Chuyển tiến độ đơn hàng sang bước kế tiếp:
-  /// Đã nhận đơn -> Quán đang pha chế -> Tài xế đang giao -> Hoàn tất
+  static TrackedOrder _applyStepBusinessRules(TrackedOrder order, OrderStep step) {
+    String? nextDriverName = order.driverName;
+    String? nextDriverPhone = order.driverPhone;
+    String nextPaymentStatus = order.paymentStatus;
+
+    if (step == OrderStep.delivering) {
+      nextDriverName = (nextDriverName != null && nextDriverName.isNotEmpty)
+          ? nextDriverName
+          : 'Nguyễn Gia Sinh';
+      nextDriverPhone = (nextDriverPhone != null && nextDriverPhone.isNotEmpty)
+          ? nextDriverPhone
+          : '0909564613';
+    } else if (step == OrderStep.completed) {
+      nextDriverName = (nextDriverName != null && nextDriverName.isNotEmpty)
+          ? nextDriverName
+          : 'Nguyễn Gia Sinh';
+      nextDriverPhone = (nextDriverPhone != null && nextDriverPhone.isNotEmpty)
+          ? nextDriverPhone
+          : '0909564613';
+      nextPaymentStatus = 'Paid';
+    }
+
+    return order.copyWith(
+      currentStep: step,
+      driverName: nextDriverName,
+      driverPhone: nextDriverPhone,
+      paymentStatus: nextPaymentStatus,
+    );
+  }
+
+  /// Chuyển tiến độ thủ công sang bước kế tiếp (khi Admin/người dùng thao tác thủ công)
   void advanceStep() {
     if (state.orders.isEmpty) return;
 
     final active = state.orders.first;
     final currentIndex = active.currentStep.index;
 
-    // Chu kỳ 4 bước: 0 -> 1 -> 2 -> 3 -> 0
     final nextIndex = (currentIndex + 1) % OrderStep.values.length;
     final nextStep = OrderStep.values[nextIndex];
 
-    final updatedActive = active.copyWith(currentStep: nextStep);
+    final updatedActive = _applyStepBusinessRules(active, nextStep);
     final updatedList = [updatedActive, ...state.orders.sublist(1)];
 
     state = state.copyWith(
       orders: updatedList,
-      countdownSeconds: 6,
+      isSimulating: false,
+      countdownSeconds: 0,
     );
   }
 
   /// Đặt trực tiếp một bước cụ thể
   void setStep(OrderStep step) {
     if (state.orders.isEmpty) return;
-    final active = state.orders.first.copyWith(currentStep: step);
+    final active = _applyStepBusinessRules(state.orders.first, step);
     final updatedList = [active, ...state.orders.sublist(1)];
     state = state.copyWith(orders: updatedList);
   }
 
-  /// Cập nhật trạng thái cho một đơn hàng cụ thể theo mã đơn (Quản trị viên duyệt đơn)
+  /// Cập nhật trạng thái cho một đơn hàng cụ thể theo mã đơn (UI State)
   void updateOrderStep(String orderCode, OrderStep step) {
     final index = state.orders.indexWhere((o) => o.orderCode == orderCode);
     if (index == -1) return;
 
-    final updated = state.orders[index].copyWith(currentStep: step);
+    final updated = _applyStepBusinessRules(state.orders[index], step);
     final list = List<TrackedOrder>.from(state.orders);
     list[index] = updated;
     state = state.copyWith(orders: list);
+  }
+
+  /// THAO TÁC ADMIN THỰC CHIẾN: Cập nhật trạng thái trên UI đồng thời gọi API xuống Backend C#
+  Future<bool> updateOrderStepWithApi(
+    String orderCode,
+    OrderStep step, {
+    required OrderRepository repository,
+  }) async {
+    // 1. Cập nhật State UI Khách hàng & Admin ngay lập tức để đồng bộ tức thì
+    updateOrderStep(orderCode, step);
+
+    // 2. Chuyển đổi sang Status chuẩn của ASP.NET Core API
+    final backendStatus = _mapStepToBackendStatus(step);
+
+    // 3. Trích xuất ID số từ mã đơn (ví dụ: 'CF1' -> 1)
+    final numericPart = orderCode.replaceAll(RegExp(r'[^0-9]'), '');
+    final orderId = int.tryParse(numericPart);
+
+    if (orderId != null && orderId > 0) {
+      debugPrint('>> [OrderTrackingNotifier] Gọi API PUT /api/orders/$orderId/status: $backendStatus');
+      if (repository is ApiOrderRepository) {
+        final dto = await repository.updateOrderStatusAndGetDto(orderId, backendStatus);
+        if (dto != null) {
+          final index = state.orders.indexWhere((o) => o.orderCode == orderCode);
+          if (index != -1 && dto.isNotEmpty) {
+            final current = state.orders[index];
+            final synced = current.copyWith(
+              driverName: (dto['driverName'] as String?) ?? current.driverName,
+              driverPhone: (dto['driverPhone'] as String?) ?? current.driverPhone,
+              paymentStatus: (dto['paymentStatus'] as String?) ?? current.paymentStatus,
+            );
+            final list = List<TrackedOrder>.from(state.orders);
+            list[index] = synced;
+            state = state.copyWith(orders: list);
+          }
+          return true;
+        }
+        return false;
+      }
+      return await repository.updateOrderStatus(orderId, backendStatus);
+    }
+    return true;
+  }
+
+  /// THAO TÁC ADMIN: Từ chối/Hủy đơn hàng có gọi API đồng bộ Backend C#
+  Future<bool> rejectOrderWithApi(
+    String orderCode, {
+    required OrderRepository repository,
+  }) async {
+    final list = state.orders.where((o) => o.orderCode != orderCode).toList();
+    state = state.copyWith(orders: list);
+
+    final numericPart = orderCode.replaceAll(RegExp(r'[^0-9]'), '');
+    final orderId = int.tryParse(numericPart);
+    if (orderId != null && orderId > 0) {
+      debugPrint('>> [OrderTrackingNotifier] Gọi API PUT /api/orders/$orderId/status: Cancelled');
+      return await repository.updateOrderStatus(orderId, 'Cancelled');
+    }
+    return true;
+  }
+
+  static String _mapStepToBackendStatus(OrderStep step) {
+    switch (step) {
+      case OrderStep.received:
+        return 'Confirmed';
+      case OrderStep.preparing:
+        return 'Preparing';
+      case OrderStep.delivering:
+        return 'Delivering';
+      case OrderStep.completed:
+        return 'Completed';
+    }
   }
 
   /// Thêm đơn hàng giả lập đang chờ xử lý mới (Dùng demo thuyết trình cho Admin)

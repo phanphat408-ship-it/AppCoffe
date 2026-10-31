@@ -84,9 +84,9 @@ class ProductCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 12),
                           SizedBox(width: 2),
                           Text(

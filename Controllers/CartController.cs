@@ -28,7 +28,7 @@ public class CartController : ControllerBase
     public async Task<IActionResult> GetCart()
     {
         var userId = User.GetUserId();
-        var cartItems = await _unitOfWork.Cart.GetCartByUserIdAsync(userId);
+        var cartItems = await _unitOfWork.Cart.GetCartByUserIdAsync(userId, asNoTracking: true);
 
         var itemDtos = cartItems.Select(ci => new CartItemDto
         {

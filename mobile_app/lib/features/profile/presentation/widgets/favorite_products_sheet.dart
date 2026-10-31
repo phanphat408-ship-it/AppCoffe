@@ -131,7 +131,7 @@ class FavoriteProductsSheet extends ConsumerWidget {
                 width: 72,
                 height: 72,
                 fit: BoxFit.cover,
-                cacheWidth: 400,
+                cacheWidth: 150,
               ),
             ),
           ),

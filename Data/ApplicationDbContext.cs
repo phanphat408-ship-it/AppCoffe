@@ -47,6 +47,9 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Order>(entity =>
         {
             entity.Property(o => o.TotalAmount).HasPrecision(18, 2);
+            entity.Property(o => o.DriverName).HasMaxLength(100);
+            entity.Property(o => o.DriverPhone).HasMaxLength(20).IsUnicode(false);
+            entity.Property(o => o.PaymentStatus).HasMaxLength(50).HasDefaultValue("Pending");
 
             entity.HasOne(o => o.User)
                   .WithMany(u => u.Orders)

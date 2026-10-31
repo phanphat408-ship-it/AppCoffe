@@ -49,8 +49,8 @@ class ProfileScreen extends ConsumerWidget {
             : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500');
 
     final points = user?.points ?? 1250;
-    final totalOrders = ref.watch(orderTrackingNotifierProvider).orders.length;
-    final totalFavorites = ref.watch(favoritesProvider).length;
+    final totalOrders = ref.watch(orderTrackingNotifierProvider.select((s) => s.orders.length));
+    final totalFavorites = ref.watch(favoritesProvider.select((s) => s.length));
     final totalVouchers = VoucherModel.availableVouchers.length;
 
     return Scaffold(
@@ -451,34 +451,34 @@ class ProfileScreen extends ConsumerWidget {
               borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.r18)),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFD700).withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.admin_panel_settings_rounded,
-                        color: Color(0xFFFFD700),
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '⚙️ KHU VỰC QUẢN TRỊ CỬA HÀNG',
-                      style: AppTextStyles.subtitle.copyWith(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ],
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.admin_panel_settings_rounded,
+                    color: Color(0xFFFFD700),
+                    size: 18,
+                  ),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '⚙️ KHU VỰC QUẢN TRỊ CỬA HÀNG',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.subtitle.copyWith(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(

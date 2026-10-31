@@ -25,7 +25,7 @@ class MyVouchersSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final vouchers = VoucherModel.availableVouchers;
+    const vouchers = VoucherModel.availableVouchers;
 
     return Container(
       constraints: BoxConstraints(

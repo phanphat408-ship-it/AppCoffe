@@ -95,7 +95,7 @@ class BranchInfoPanel extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppDimens.rFull),
                   child: Container(
                     padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.background,
                       shape: BoxShape.circle,
                     ),
@@ -123,7 +123,7 @@ class BranchInfoPanel extends StatelessWidget {
                     height: 72,
                     fit: BoxFit.cover,
                     fallbackIcon: Icons.storefront_rounded,
-                    cacheWidth: 400,
+                    cacheWidth: 150,
                   ),
                 ),
               ),

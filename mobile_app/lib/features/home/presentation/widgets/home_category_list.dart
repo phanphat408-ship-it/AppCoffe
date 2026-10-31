@@ -20,7 +20,7 @@ class HomeCategoryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Thêm mục "Tất cả" (Id: 0) ở đầu danh sách
-    final allItem = const CategoryModel(id: 0, name: 'Tất cả');
+    const allItem = CategoryModel(id: 0, name: 'Tất cả');
     final displayList = [allItem, ...categories];
 
     return SizedBox(

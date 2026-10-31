@@ -50,7 +50,7 @@ void main() {
       expect(active, isNotNull);
       expect(active!.orderCode, 'CF82914');
       expect(active.currentStep, OrderStep.received);
-      expect(state.isSimulating, isTrue);
+      expect(state.isSimulating, isFalse);
     });
 
     test('advanceStep() nhảy tuần tự qua 4 bước và quay vòng lặp', () {
@@ -85,14 +85,20 @@ void main() {
       );
     });
 
-    test('pauseSimulation và startSimulation thay đổi trạng thái mô phỏng', () {
+    test('updateOrderStep cập nhật trạng thái đơn hàng thủ công của Admin', () {
       final notifier = container.read(orderTrackingNotifierProvider.notifier);
 
-      notifier.pauseSimulation();
-      expect(container.read(orderTrackingNotifierProvider).isSimulating, isFalse);
+      notifier.updateOrderStep('CF82914', OrderStep.preparing);
+      expect(
+        container.read(orderTrackingNotifierProvider).activeOrder?.currentStep,
+        OrderStep.preparing,
+      );
 
-      notifier.startSimulation();
-      expect(container.read(orderTrackingNotifierProvider).isSimulating, isTrue);
+      notifier.updateOrderStep('CF82914', OrderStep.delivering);
+      expect(
+        container.read(orderTrackingNotifierProvider).activeOrder?.currentStep,
+        OrderStep.delivering,
+      );
     });
 
     test('setStep đặt trực tiếp bước chỉ định', () {

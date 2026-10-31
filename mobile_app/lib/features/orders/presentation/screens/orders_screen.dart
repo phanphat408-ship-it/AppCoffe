@@ -11,9 +11,7 @@ class OrdersScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final trackingState = ref.watch(orderTrackingNotifierProvider);
-    final notifier = ref.read(orderTrackingNotifierProvider.notifier);
-    final orders = trackingState.orders;
+    final orders = ref.watch(orderTrackingNotifierProvider.select((s) => s.orders));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -22,17 +20,6 @@ class OrdersScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         centerTitle: true,
         title: Text('Theo Dõi Đơn Hàng', style: AppTextStyles.h3),
-        actions: [
-          IconButton(
-            tooltip: trackingState.isSimulating ? 'Tạm dừng mô phỏng' : 'Bật mô phỏng',
-            icon: Icon(
-              trackingState.isSimulating ? Icons.timer_rounded : Icons.timer_off_outlined,
-              color: trackingState.isSimulating ? AppColors.primary : AppColors.textSecondary,
-            ),
-            onPressed: () => notifier.toggleSimulation(),
-          ),
-          const SizedBox(width: 8),
-        ],
       ),
       body: orders.isEmpty
           ? Center(
@@ -98,10 +85,6 @@ class OrdersScreen extends ConsumerWidget {
                     OrderTimelineCard(
                       order: order,
                       isLiveOrder: isLive,
-                      isSimulating: trackingState.isSimulating,
-                      countdownSeconds: trackingState.countdownSeconds,
-                      onNextStepTap: () => notifier.advanceStep(),
-                      onToggleSimulation: () => notifier.toggleSimulation(),
                     ),
                   ],
                 );

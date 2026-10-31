@@ -48,7 +48,7 @@ public class BranchesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<BranchDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetBranchById(int id)
     {
-        var branch = await _unitOfWork.Branches.GetByIdAsync(id);
+        var branch = await _unitOfWork.Branches.GetByIdAsync(id, asNoTracking: true);
         if (branch == null)
         {
             return NotFound(ApiResponse<BranchDto>.Fail($"Không tìm thấy chi nhánh với ID {id}."));

@@ -88,7 +88,7 @@ void main() {
 
   group('BranchRepository Tests', () {
     test('Mock data chứa đủ 5 chi nhánh TP.HCM với tọa độ hợp lệ', () {
-      final branches = BranchRepository.mockBranches;
+      const branches = BranchRepository.mockBranches;
       expect(branches.length, 5);
 
       for (final branch in branches) {

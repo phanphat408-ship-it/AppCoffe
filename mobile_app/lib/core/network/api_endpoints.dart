@@ -1,18 +1,11 @@
-import 'package:flutter/foundation.dart';
-
 /// Danh sách đường dẫn API Backend khớp với ASP.NET Core API
 class ApiEndpoints {
   ApiEndpoints._();
 
-  /// Địa chỉ Base URL máy chủ:
-  /// - Khi chạy trên Android Emulator: 10.0.2.2:5108
-  /// - Khi chạy Web / Desktop / iOS Simulator: localhost:5108
+  /// Địa chỉ Base URL máy chủ kết nối với ASP.NET Core:
+  /// Chuẩn kết nối máy ảo Android (Android Emulator): 10.0.2.2:5108
   static String get baseUrl {
-    if (kIsWeb) return 'http://localhost:5108';
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:5108';
-    }
-    return 'http://localhost:5108';
+    return 'http://10.0.2.2:5108';
   }
 
   // Auth endpoints

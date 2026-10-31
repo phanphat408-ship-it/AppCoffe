@@ -28,9 +28,11 @@ public class ProductsController : ControllerBase
         [FromQuery] string? search,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
-        [FromQuery] bool onlyAvailable = false)
+        [FromQuery] bool onlyAvailable = false,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
-        var products = await _unitOfWork.Products.GetFilteredAsync(categoryId, search, minPrice, maxPrice, onlyAvailable);
+        var products = await _unitOfWork.Products.GetFilteredAsync(categoryId, search, minPrice, maxPrice, onlyAvailable, page, pageSize);
 
         var productDtos = products.Select(p => new ProductDto
         {
@@ -56,7 +58,7 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<ProductDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetProductById(int id)
     {
-        var product = await _unitOfWork.Products.GetByIdWithCategoryAsync(id);
+        var product = await _unitOfWork.Products.GetByIdWithCategoryAsync(id, asNoTracking: true);
         if (product == null)
         {
             return NotFound(ApiResponse<ProductDto>.Fail($"Không tìm thấy sản phẩm với ID {id}."));

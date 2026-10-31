@@ -53,7 +53,7 @@ class CartItemTile extends StatelessWidget {
                 height: 76,
                 fit: BoxFit.cover,
                 fallbackIcon: Icons.local_cafe_rounded,
-                cacheWidth: 400,
+                cacheWidth: 160,
               ),
             ),
           ),

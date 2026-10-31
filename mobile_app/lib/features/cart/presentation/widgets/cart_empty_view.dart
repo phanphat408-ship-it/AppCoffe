@@ -39,6 +39,7 @@ class CartEmptyView extends StatelessWidget {
                   child: Image.asset(
                     AppAssets.emptyCart,
                     fit: BoxFit.cover,
+                    cacheWidth: 300,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.shopping_bag_outlined,
                       size: 96,

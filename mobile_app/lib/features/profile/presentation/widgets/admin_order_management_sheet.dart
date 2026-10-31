@@ -6,6 +6,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../orders/data/models/order_tracking_model.dart';
 import '../../../orders/presentation/controllers/order_tracking_notifier.dart';
+import '../../../cart/data/repositories/order_repository.dart';
 
 /// BottomSheet Quản Lý & Duyệt Đơn Hàng dành cho Admin / Quản lý cửa hàng
 class AdminOrderManagementSheet extends ConsumerStatefulWidget {
@@ -322,9 +323,13 @@ class _AdminOrderManagementSheetState
                     const Icon(Icons.person_outline_rounded,
                         size: 16, color: AppColors.primary),
                     const SizedBox(width: 6),
-                    Text(
-                      order.customerName,
-                      style: AppTextStyles.subtitle.copyWith(fontSize: 14),
+                    Flexible(
+                      child: Text(
+                        order.customerName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.subtitle.copyWith(fontSize: 14),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Container(
@@ -368,6 +373,13 @@ class _AdminOrderManagementSheetState
                   ],
                 ),
 
+                // Khối thông tin Tài xế (Hiển thị khi Đang giao hàng hoặc Đã hoàn tất)
+                if (order.currentStep == OrderStep.delivering ||
+                    order.currentStep == OrderStep.completed) ...[
+                  const SizedBox(height: 10),
+                  _buildDriverInfoBlock(order),
+                ],
+
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 10),
                   child: Divider(height: 1, color: AppColors.divider),
@@ -409,42 +421,8 @@ class _AdminOrderManagementSheetState
 
                 const SizedBox(height: 8),
 
-                // Tổng tiền & Thanh toán
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: AppColors.secondary.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(AppDimens.r12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.payments_outlined,
-                              size: 16, color: AppColors.primary),
-                          const SizedBox(width: 6),
-                          Text(
-                            order.paymentMethodTitle,
-                            style: AppTextStyles.caption.copyWith(
-                              color: AppColors.textPrimary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        CurrencyFormatter.vnd(order.totalAmount.toDouble()),
-                        style: AppTextStyles.h3.copyWith(
-                          color: AppColors.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                // Tổng tiền & Thanh toán (gồm Trạng thái tiền ngay chỗ nút xác nhận)
+                _buildPaymentSection(order),
 
                 const SizedBox(height: 14),
 
@@ -458,8 +436,184 @@ class _AdminOrderManagementSheetState
     );
   }
 
+  /// Khối thông tin Tài xế (Hiển thị khi đơn ở trạng thái Đang giao hàng hoặc Đã hoàn tất)
+  Widget _buildDriverInfoBlock(TrackedOrder order) {
+    final driverName =
+        (order.driverName != null && order.driverName!.trim().isNotEmpty)
+            ? order.driverName!
+            : 'Nguyễn Gia Sinh';
+    final driverPhone =
+        (order.driverPhone != null && order.driverPhone!.trim().isNotEmpty)
+            ? order.driverPhone!
+            : '0909564613';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF6A1B9A).withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppDimens.r10),
+        border: Border.all(
+          color: const Color(0xFF6A1B9A).withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: const Color(0xFF6A1B9A).withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.two_wheeler_rounded,
+              size: 16,
+              color: Color(0xFF6A1B9A),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tài xế giao hàng',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.textSecondary,
+                    fontSize: 10.5,
+                  ),
+                ),
+                Text(
+                  driverName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.subtitle.copyWith(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppDimens.r6),
+              border: Border.all(
+                color: const Color(0xFF6A1B9A).withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.phone_rounded,
+                  size: 12,
+                  color: Color(0xFF6A1B9A),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  driverPhone,
+                  style: const TextStyle(
+                    color: Color(0xFF6A1B9A),
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Khối Thanh toán & Trạng thái tiền ngay phía trên nút xác nhận
+  Widget _buildPaymentSection(TrackedOrder order) {
+    final isPaid = order.paymentStatus.trim().toLowerCase() == 'paid';
+    final paymentStatusColor =
+        isPaid ? const Color(0xFF2E7D32) : const Color(0xFFE65100);
+    final paymentStatusText =
+        isPaid ? 'Trạng thái tiền: Đã nhận' : 'Trạng thái tiền: Chờ thu';
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.secondary.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(AppDimens.r12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(Icons.payments_outlined,
+                        size: 16, color: AppColors.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        order.paymentMethodTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                CurrencyFormatter.vnd(order.totalAmount.toDouble()),
+                style: AppTextStyles.h3.copyWith(
+                  color: AppColors.primary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 6),
+            child: Divider(height: 1, color: AppColors.divider),
+          ),
+          Row(
+            children: [
+              Icon(
+                isPaid ? Icons.check_circle_rounded : Icons.schedule_rounded,
+                size: 15,
+                color: paymentStatusColor,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  paymentStatusText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.caption.copyWith(
+                    color: paymentStatusColor,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildOrderActionButtons(TrackedOrder order) {
     final notifier = ref.read(orderTrackingNotifierProvider.notifier);
+    final repository = ref.read(orderRepositoryProvider);
 
     switch (order.currentStep) {
       case OrderStep.received:
@@ -468,8 +622,13 @@ class _AdminOrderManagementSheetState
             Expanded(
               flex: 3,
               child: ElevatedButton.icon(
-                onPressed: () {
-                  notifier.updateOrderStep(order.orderCode, OrderStep.preparing);
+                onPressed: () async {
+                  await notifier.updateOrderStepWithApi(
+                    order.orderCode,
+                    OrderStep.preparing,
+                    repository: repository,
+                  );
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(
@@ -520,8 +679,13 @@ class _AdminOrderManagementSheetState
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              notifier.updateOrderStep(order.orderCode, OrderStep.delivering);
+            onPressed: () async {
+              await notifier.updateOrderStepWithApi(
+                order.orderCode,
+                OrderStep.delivering,
+                repository: repository,
+              );
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Row(
@@ -530,7 +694,7 @@ class _AdminOrderManagementSheetState
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Đơn #${order.orderCode} đã pha chế xong, bàn giao cho tài xế!',
+                          'Đơn #${order.orderCode} đã pha chế xong, bàn giao cho tài xế Nguyễn Gia Sinh!',
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -562,8 +726,13 @@ class _AdminOrderManagementSheetState
         return SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              notifier.updateOrderStep(order.orderCode, OrderStep.completed);
+            onPressed: () async {
+              await notifier.updateOrderStepWithApi(
+                order.orderCode,
+                OrderStep.completed,
+                repository: repository,
+              );
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Row(
@@ -643,8 +812,13 @@ class _AdminOrderManagementSheetState
             child: const Text('Quay lại'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
+              final repository = ref.read(orderRepositoryProvider);
+              await ref
+                  .read(orderTrackingNotifierProvider.notifier)
+                  .rejectOrderWithApi(orderCode, repository: repository);
+              if (!mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Đã từ chối đơn #$orderCode'),

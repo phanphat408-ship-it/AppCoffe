@@ -26,20 +26,16 @@ public class CategoriesController : ControllerBase
     public async Task<IActionResult> GetCategories()
     {
         var categories = await _unitOfWork.Categories.GetAllAsync();
-        var dtos = new List<CategoryDto>();
+        var countsMap = await _unitOfWork.Products.GetProductCountsByCategoryAsync();
 
-        foreach (var c in categories)
+        var dtos = categories.Select(c => new CategoryDto
         {
-            var productCount = await _unitOfWork.Products.CountAsync(p => p.CategoryId == c.Id);
-            dtos.Add(new CategoryDto
-            {
-                Id = c.Id,
-                Name = c.Name,
-                Description = c.Description,
-                ImageUrl = c.ImageUrl,
-                ProductCount = productCount
-            });
-        }
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            ImageUrl = c.ImageUrl,
+            ProductCount = countsMap.TryGetValue(c.Id, out var count) ? count : 0
+        }).ToList();
 
         return Ok(ApiResponse<IReadOnlyList<CategoryDto>>.Ok(dtos));
     }
@@ -52,7 +48,7 @@ public class CategoriesController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<CategoryDto>), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetCategoryById(int id)
     {
-        var category = await _unitOfWork.Categories.GetByIdAsync(id);
+        var category = await _unitOfWork.Categories.GetByIdAsync(id, asNoTracking: true);
         if (category == null)
         {
             return NotFound(ApiResponse<CategoryDto>.Fail($"Không tìm thấy danh mục với ID {id}."));

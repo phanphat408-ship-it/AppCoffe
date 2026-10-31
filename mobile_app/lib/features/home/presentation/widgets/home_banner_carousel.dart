@@ -32,7 +32,7 @@ class _HomeBannerCarouselState extends State<HomeBannerCarousel> {
         CarouselSlider.builder(
           itemCount: widget.banners.length,
           options: CarouselOptions(
-            height: 155,
+            height: 160,
             viewportFraction: 0.90,
             enlargeCenterPage: true,
             autoPlay: true,
@@ -77,7 +77,7 @@ class _HomeBannerCarouselState extends State<HomeBannerCarousel> {
   Widget _buildBannerItem(BannerModel banner) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [banner.startColor, banner.endColor],

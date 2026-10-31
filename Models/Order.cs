@@ -32,6 +32,16 @@ public class Order
     [MaxLength(500)]
     public string? Note { get; set; }
 
+    [MaxLength(100)]
+    public string? DriverName { get; set; }
+
+    [MaxLength(20)]
+    [Column(TypeName = "varchar(20)")]
+    public string? DriverPhone { get; set; }
+
+    [MaxLength(50)]
+    public string? PaymentStatus { get; set; } = "Pending"; // Pending, Paid
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime? UpdatedAt { get; set; }

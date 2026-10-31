@@ -25,8 +25,12 @@ public class Repository<T> : IRepository<T> where T : class
         return await _dbSet.Where(predicate).AsNoTracking().ToListAsync();
     }
 
-    public virtual async Task<T?> GetByIdAsync(int id)
+    public virtual async Task<T?> GetByIdAsync(int id, bool asNoTracking = false)
     {
+        if (asNoTracking)
+        {
+            return await _dbSet.AsNoTracking().FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id);
+        }
         return await _dbSet.FindAsync(id);
     }
 

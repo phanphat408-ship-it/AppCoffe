@@ -56,6 +56,9 @@ public class OrderDto
     public string? ShippingAddress { get; set; }
     public string? ContactPhone { get; set; }
     public string? Note { get; set; }
+    public string? DriverName { get; set; }
+    public string? DriverPhone { get; set; }
+    public string PaymentStatus { get; set; } = "Pending";
     public DateTime CreatedAt { get; set; }
     public List<OrderDetailDto> OrderDetails { get; set; } = new();
 }

@@ -36,10 +36,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final homeState = ref.watch(homeNotifierProvider);
-    final authState = ref.watch(authNotifierProvider);
+    final userName = ref.watch(authNotifierProvider.select((s) => s.user?.name));
+    final isAuthenticated = ref.watch(authNotifierProvider.select((s) => s.isAuthenticated));
+    final locationText = ref.watch(branchNotifierProvider.select((s) => s.effectiveOrderBranch?.name));
     final cartItemCount = ref.watch(cartItemCountProvider);
-    final branchState = ref.watch(branchNotifierProvider);
-    final currentBranch = branchState.effectiveOrderBranch;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -54,17 +54,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           slivers: [
             // 1. SliverAppBar (Pinned: Dính ở trên cùng với Search bar & Cart)
             HomeSliverAppBar(
-              userName: authState.user?.name,
-              locationText: currentBranch?.name,
+              userName: userName,
+              locationText: locationText,
               searchController: _searchController,
-              isAuthenticated: authState.isAuthenticated,
+              isAuthenticated: isAuthenticated,
               cartItemCount: cartItemCount,
               onSearchChanged: (query) {
                 ref.read(homeNotifierProvider.notifier).searchProducts(query);
               },
               onMapTap: () => context.push(AppRoutes.map),
               onCartTap: () => context.push(AppRoutes.cart),
-              onProfileTap: () => _handleProfileTap(context, authState.isAuthenticated),
+              onProfileTap: () => _handleProfileTap(context, isAuthenticated),
             ),
 
             // 2. Banner Khuyến mãi tự động trượt (Carousel Slider)

@@ -71,13 +71,15 @@ class CartScreen extends ConsumerWidget {
         ),
         bottomNavigationBar: items.isEmpty
             ? null
-            : CartOrderSummary(
-                subtotal: ref.watch(cartTotalProvider),
-                deliveryFee: ref.watch(deliveryFeeProvider),
-                total: ref.watch(cartGrandTotalProvider),
-                itemCount: ref.watch(cartItemCountProvider),
-                isSubmitting: isSubmitting,
-                onPlaceOrder: () => _placeOrder(context, ref),
+            : Consumer(
+                builder: (context, sumRef, child) => CartOrderSummary(
+                  subtotal: sumRef.watch(cartTotalProvider),
+                  deliveryFee: sumRef.watch(deliveryFeeProvider),
+                  total: sumRef.watch(cartGrandTotalProvider),
+                  itemCount: sumRef.watch(cartItemCountProvider),
+                  isSubmitting: isSubmitting,
+                  onPlaceOrder: () => _placeOrder(context, ref),
+                ),
               ),
       ),
     );

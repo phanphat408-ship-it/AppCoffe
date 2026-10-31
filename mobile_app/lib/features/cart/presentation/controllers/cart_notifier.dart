@@ -102,7 +102,7 @@ class CartNotifier extends Notifier<List<CartItem>> {
     final newQty = currentQty + quantity;
 
     if (newQty > CartConfig.maxQuantityPerItem) {
-      throw CartException(
+      throw const CartException(
         'Mỗi cấu hình món chỉ được đặt tối đa ${CartConfig.maxQuantityPerItem} phần.',
       );
     }
@@ -146,7 +146,7 @@ class CartNotifier extends Notifier<List<CartItem>> {
       throw const CartException('Số lượng không được âm.');
     }
     if (newQuantity > CartConfig.maxQuantityPerItem) {
-      throw CartException(
+      throw const CartException(
         'Mỗi món chỉ được đặt tối đa ${CartConfig.maxQuantityPerItem} phần.',
       );
     }

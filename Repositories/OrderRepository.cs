@@ -10,7 +10,7 @@ public class OrderRepository : Repository<Order>, IOrderRepository
     {
     }
 
-    public async Task<IReadOnlyList<Order>> GetOrdersAsync(int? userId = null, string? status = null)
+    public async Task<IReadOnlyList<Order>> GetOrdersAsync(int? userId = null, string? status = null, int? page = null, int? pageSize = null)
     {
         var query = _dbSet
             .Include(o => o.User)
@@ -30,26 +30,47 @@ public class OrderRepository : Repository<Order>, IOrderRepository
             query = query.Where(o => o.Status.ToLower() == status.Trim().ToLower());
         }
 
-        return await query.OrderByDescending(o => o.CreatedAt).ToListAsync();
+        query = query.OrderByDescending(o => o.CreatedAt);
+
+        if (page.HasValue && page.Value > 0 && pageSize.HasValue && pageSize.Value > 0)
+        {
+            query = query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value);
+        }
+
+        return await query.ToListAsync();
     }
 
-    public async Task<Order?> GetByIdWithDetailsAsync(int orderId)
+    public async Task<Order?> GetByIdWithDetailsAsync(int orderId, bool asNoTracking = false)
     {
-        return await _dbSet
+        var query = _dbSet
             .Include(o => o.User)
             .Include(o => o.Branch)
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Product)
-            .FirstOrDefaultAsync(o => o.Id == orderId);
+            .AsQueryable();
+
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query.FirstOrDefaultAsync(o => o.Id == orderId);
     }
 
-    public async Task<Order?> GetByIdAndUserIdWithDetailsAsync(int orderId, int userId)
+    public async Task<Order?> GetByIdAndUserIdWithDetailsAsync(int orderId, int userId, bool asNoTracking = false)
     {
-        return await _dbSet
+        var query = _dbSet
             .Include(o => o.User)
             .Include(o => o.Branch)
             .Include(o => o.OrderDetails)
                 .ThenInclude(od => od.Product)
-            .FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
+            .AsQueryable();
+
+        if (asNoTracking)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query.FirstOrDefaultAsync(o => o.Id == orderId && o.UserId == userId);
     }
 }

@@ -114,6 +114,7 @@ class _AnimatedIllustration extends StatelessWidget {
           child: Image.asset(
             AppAssets.orderSuccess,
             fit: BoxFit.cover,
+            cacheWidth: 350,
             errorBuilder: (context, error, stackTrace) => const Icon(
               Icons.check_circle_rounded,
               size: 140,

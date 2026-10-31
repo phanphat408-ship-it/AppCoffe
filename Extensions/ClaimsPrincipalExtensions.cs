@@ -6,7 +6,10 @@ public static class ClaimsPrincipalExtensions
 {
     public static int GetUserId(this ClaimsPrincipal user)
     {
-        var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var idClaim = user.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? user.FindFirst("sub")?.Value
+                   ?? user.FindFirst("id")?.Value
+                   ?? user.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
         return int.TryParse(idClaim, out var userId) ? userId : 0;
     }
 

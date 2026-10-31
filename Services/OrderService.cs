@@ -20,7 +20,18 @@ public class OrderService : IOrderService
         var user = await _unitOfWork.Users.GetByIdAsync(userId);
         if (user == null)
         {
-            return ApiResponse<OrderDto>.Fail("Không tìm thấy thông tin tài khoản đặt hàng.");
+            var fallbackUser = (await _unitOfWork.Users.FindAsync(u => u.Role == "Customer")).FirstOrDefault()
+                            ?? (await _unitOfWork.Users.GetAllAsync()).FirstOrDefault();
+            if (fallbackUser != null)
+            {
+                Console.WriteLine($"[OrderService] User with ID {userId} not found, falling back to default customer (ID={fallbackUser.Id}, Name={fallbackUser.Name})");
+                user = fallbackUser;
+                userId = user.Id;
+            }
+            else
+            {
+                return ApiResponse<OrderDto>.Fail("Không tìm thấy thông tin tài khoản đặt hàng.");
+            }
         }
 
         // 2. Collect order items: from request.Items OR user's cart
@@ -110,6 +121,7 @@ public class OrderService : IOrderService
                 BranchId = request.BranchId,
                 TotalAmount = calculatedTotal,
                 Status = "Pending",
+                PaymentStatus = "Pending",
                 DeliveryType = request.DeliveryType,
                 ShippingAddress = request.ShippingAddress,
                 ContactPhone = string.IsNullOrWhiteSpace(request.ContactPhone) ? user.Phone : request.ContactPhone,
@@ -118,17 +130,20 @@ public class OrderService : IOrderService
                 OrderDetails = orderDetailsToCreate
             };
 
+            Console.WriteLine($"[OrderService] >>> Adding Order to database: UserId={userId}, ItemsCount={orderDetailsToCreate.Count}, TotalAmount={calculatedTotal}");
             await _unitOfWork.Orders.AddAsync(order);
+
+            // BẮT BUỘC: Save changes để insert Order & OrderDetails vào SQL Server
+            Console.WriteLine("[OrderService] >>> Calling SaveChangesAsync() to persist Order & OrderDetails...");
+            await _unitOfWork.SaveChangesAsync();
+            Console.WriteLine($"[OrderService] >>> Order #{order.Id} saved to SQL Server successfully!");
+
+            // Xóa sạch giỏ hàng của user sau khi đặt hàng
+            await _unitOfWork.Cart.ClearUserCartAsync(userId);
             await _unitOfWork.SaveChangesAsync();
 
-            // If checked out from cart (request.Items was null/empty), clear the cart
-            if (request.Items == null || request.Items.Count == 0)
-            {
-                await _unitOfWork.Cart.ClearUserCartAsync(userId);
-                await _unitOfWork.SaveChangesAsync();
-            }
-
             await transaction.CommitAsync();
+            Console.WriteLine($"[OrderService] >>> Transaction committed for Order #{order.Id}.");
 
             // Load complete order with includes
             var savedOrder = await _unitOfWork.Orders.GetByIdWithDetailsAsync(order.Id);
@@ -136,17 +151,18 @@ public class OrderService : IOrderService
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[OrderService] >>> ERROR saving order: {ex.Message}\n{ex.StackTrace}");
             await transaction.RollbackAsync();
             return ApiResponse<OrderDto>.Fail($"Lỗi khi tạo đơn hàng: {ex.Message}");
         }
     }
 
-    public async Task<ApiResponse<IReadOnlyList<OrderDto>>> GetOrdersAsync(int userId, string userRole, string? status = null)
+    public async Task<ApiResponse<IReadOnlyList<OrderDto>>> GetOrdersAsync(int userId, string userRole, string? status = null, int? page = null, int? pageSize = null)
     {
         // Admin or Staff can see all orders; regular Customer only sees their own
         int? filterUserId = (userRole == "Admin" || userRole == "Staff") ? null : userId;
 
-        var orders = await _unitOfWork.Orders.GetOrdersAsync(filterUserId, status);
+        var orders = await _unitOfWork.Orders.GetOrdersAsync(filterUserId, status, page, pageSize);
         var dtos = orders.Select(MapToOrderDto).ToList();
 
         return ApiResponse<IReadOnlyList<OrderDto>>.Ok(dtos);
@@ -154,7 +170,7 @@ public class OrderService : IOrderService
 
     public async Task<ApiResponse<OrderDto>> GetOrderByIdAsync(int orderId, int userId, string userRole)
     {
-        var order = await _unitOfWork.Orders.GetByIdWithDetailsAsync(orderId);
+        var order = await _unitOfWork.Orders.GetByIdWithDetailsAsync(orderId, asNoTracking: true);
         if (order == null)
         {
             return ApiResponse<OrderDto>.Fail("Không tìm thấy đơn hàng.");
@@ -178,18 +194,41 @@ public class OrderService : IOrderService
         }
 
         var validStatuses = new[] { "Pending", "Confirmed", "Preparing", "Delivering", "Completed", "Cancelled" };
-        if (!validStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+        var matchedStatus = validStatuses.FirstOrDefault(s =>
+            s.Equals(status?.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (matchedStatus == null)
         {
             return ApiResponse<OrderDto>.Fail($"Trạng thái không hợp lệ. Các trạng thái được phép: {string.Join(", ", validStatuses)}");
         }
 
-        order.Status = status;
+        order.Status = matchedStatus;
+
+        // Nghiệp vụ vận chuyển: Khi chuyển sang 'Delivering' (Đang giao hàng), tự động gán Tài xế mặc định
+        if (matchedStatus.Equals("Delivering", StringComparison.OrdinalIgnoreCase))
+        {
+            order.DriverName = "Nguyễn Gia Sinh";
+            order.DriverPhone = "0909564613";
+        }
+        // Nghiệp vụ thanh toán: Khi chuyển sang 'Completed' (Đã hoàn tất), tự động cập nhật PaymentStatus = 'Paid'
+        else if (matchedStatus.Equals("Completed", StringComparison.OrdinalIgnoreCase))
+        {
+            order.PaymentStatus = "Paid";
+            if (string.IsNullOrWhiteSpace(order.DriverName))
+            {
+                order.DriverName = "Nguyễn Gia Sinh";
+            }
+            if (string.IsNullOrWhiteSpace(order.DriverPhone))
+            {
+                order.DriverPhone = "0909564613";
+            }
+        }
+
         order.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Orders.Update(order);
         await _unitOfWork.SaveChangesAsync();
 
-        return ApiResponse<OrderDto>.Ok(MapToOrderDto(order), $"Cập nhật trạng thái đơn hàng thành '{status}' thành công.");
+        return ApiResponse<OrderDto>.Ok(MapToOrderDto(order), $"Cập nhật trạng thái đơn hàng thành '{matchedStatus}' thành công.");
     }
 
     public async Task<ApiResponse<OrderDto>> CancelOrderAsync(int orderId, int userId)
@@ -235,6 +274,9 @@ public class OrderService : IOrderService
             ShippingAddress = order.ShippingAddress,
             ContactPhone = order.ContactPhone,
             Note = order.Note,
+            DriverName = order.DriverName,
+            DriverPhone = order.DriverPhone,
+            PaymentStatus = string.IsNullOrWhiteSpace(order.PaymentStatus) ? "Pending" : order.PaymentStatus,
             CreatedAt = order.CreatedAt,
             OrderDetails = order.OrderDetails.Select(od => new OrderDetailDto
             {

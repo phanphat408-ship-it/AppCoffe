@@ -15,6 +15,7 @@ import '../../../orders/presentation/controllers/order_tracking_notifier.dart';
 import '../../data/models/cart_item.dart';
 import '../../data/models/checkout_models.dart';
 import '../../data/models/order_models.dart';
+import '../../data/repositories/order_repository.dart';
 import '../controllers/cart_notifier.dart';
 import '../controllers/checkout_notifier.dart';
 import '../widgets/vietqr_payment_dialog.dart';
@@ -96,8 +97,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final items = ref.watch(cartNotifierProvider);
     final subtotal = ref.watch(cartTotalProvider);
     final grandTotal = _calculateGrandTotal(subtotal);
-    final branchState = ref.watch(branchNotifierProvider);
-    final selectedBranch = branchState.effectiveOrderBranch;
+    final selectedBranch = ref.watch(branchNotifierProvider.select((s) => s.effectiveOrderBranch));
     final isSubmitting = ref.watch(
       checkoutNotifierProvider.select((s) => s.isSubmitting),
     ) || _isSubmittingOrder;
@@ -237,7 +237,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                           // Bọc an toàn sự kiện bấm nút để tránh xung đột chu kỳ build
                           Future.microtask(() {
                             if (!mounted) return;
-                            _handlePlaceOrder(grandTotal, selectedBranch?.name);
+                            _handlePlaceOrder(grandTotal, selectedBranch);
                           });
                         },
                 ),
@@ -605,7 +605,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               Text('Món đã chọn (${items.length})', style: AppTextStyles.subtitle.copyWith(fontSize: 15)),
               InkWell(
                 onTap: () => context.pop(),
-                child: Text('Thêm món >', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+                child: const Text('Thêm món >', style: TextStyle(color: AppColors.primary, fontSize: 13, fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -625,7 +625,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         width: 46,
                         height: 46,
                         fit: BoxFit.cover,
-                        cacheWidth: 400,
+                        cacheWidth: 100,
                       ),
                     ),
                   ),
@@ -695,7 +695,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(AppDimens.r10),
-                borderSide: BorderSide(color: AppColors.lightBorder),
+                borderSide: const BorderSide(color: AppColors.lightBorder),
               ),
             ),
           ),
@@ -952,7 +952,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   /// Xử lý bấm Đặt đơn hàng
-  Future<void> _handlePlaceOrder(int grandTotal, String? branchName) async {
+  Future<void> _handlePlaceOrder(int grandTotal, dynamic selectedBranch) async {
     if (_isSubmittingOrder) return;
 
     final now = DateTime.now();
@@ -964,58 +964,81 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         context: context,
         orderCode: randomCode,
         totalAmount: grandTotal,
-        onPaymentConfirmed: () => _finalizeOrder(randomCode, grandTotal, branchName),
+        onPaymentConfirmed: () => _finalizeOrder(grandTotal, selectedBranch),
       );
     } else {
       // 2. Tiền mặt (COD) hoặc Ví điện tử -> Đặt trực tiếp
-      await _finalizeOrder(randomCode, grandTotal, branchName);
+      await _finalizeOrder(grandTotal, selectedBranch);
     }
   }
 
-  Future<void> _finalizeOrder(String orderCode, int grandTotal, String? branchName) async {
+  Future<void> _finalizeOrder(int grandTotal, dynamic selectedBranch) async {
     if (_isSubmittingOrder) return;
+
+    final items = List<CartItem>.from(ref.read(cartNotifierProvider));
+    if (items.isEmpty) {
+      AppSnackBar.error(context, 'Giỏ hàng của bạn đang trống.');
+      return;
+    }
+
     setState(() => _isSubmittingOrder = true);
 
-    // Chụp lại thông tin trước khi giỏ hàng bị clear
-    final items = List<CartItem>.from(ref.read(cartNotifierProvider));
+    final branchName = (selectedBranch?.name as String?) ?? 'Chi Nhánh Quận 1 - Nguyễn Huệ';
+    final branchId = (selectedBranch?.id as int?) ?? 1;
     final shippingAddress = _addressController.text.trim();
-    final paymentMethodTitle = _paymentMethod.title;
-    final totalQuantity = items.fold<int>(0, (sum, i) => sum + i.quantity);
+    final note = _noteController.text.trim();
+    final saved = ref.read(savedAddressesProvider);
+    final phone = saved.isNotEmpty ? saved.first.phone : '0901234567';
 
-    final finalOrderResult = OrderResult(
-      orderCode: orderCode,
-      totalAmount: grandTotal,
-      totalQuantity: totalQuantity,
-      createdAt: DateTime.now(),
-      branchName: branchName ?? 'Chi Nhánh Quận 1 - Nguyễn Huệ',
-      shippingAddress: shippingAddress,
-      paymentMethodTitle: paymentMethodTitle,
+    final orderRequest = OrderRequest(
       items: items,
+      subtotal: grandTotal - _deliveryFee + _discountAmount,
+      deliveryFee: _deliveryFee,
+      discount: _discountAmount,
+      total: grandTotal,
+      note: note.isNotEmpty ? note : null,
+      deliveryType: _deliveryType,
+      branchId: branchId,
+      branchName: branchName,
+      shippingAddress: _deliveryType == DeliveryType.delivery
+          ? (shippingAddress.isNotEmpty ? shippingAddress : '123 Hai Bà Trưng, P. Bến Nghé, Quận 1, TP.HCM')
+          : (selectedBranch?.address as String? ?? '68 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP.HCM'),
+      contactPhone: phone,
+      paymentMethod: _paymentMethod,
+      voucherCode: _appliedVoucher?.code,
     );
 
-    // Bọc an toàn (Delay modification): Bọc tất cả các lệnh làm thay đổi state của Provider
-    // (như addNewOrder, clearCart, clearNote, setTab) và các lệnh chuyển hướng màn hình (context.go)
-    // vào bên trong WidgetsBinding.instance.addPostFrameCallback hoặc Future.microtask
-    // để đảm bảo cây Widget đã hoàn thành chu kỳ build hiện tại, tránh triệt để lỗi màn hình đỏ:
-    // "Tried to modify a provider while the widget tree was building"
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    try {
+      // BẮT BUỘC gọi API sang Backend và kiểm tra HTTP statusCode
+      final orderResult = await ref.read(orderRepositoryProvider).submitOrder(orderRequest);
 
-      // 1. Gửi đơn hàng vào hệ thống theo dõi đơn hàng thời gian thực
-      ref.read(orderTrackingNotifierProvider.notifier).addNewOrder(finalOrderResult);
+      // TUYỆT ĐỐI CHỈ KHI API THÀNH CÔNG (HTTP 200/201) MỚI TIẾN HÀNH BÁO THÀNH CÔNG VÀ CHUYỂN TRANG
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
 
-      // 2. Làm sạch giỏ hàng & ghi chú an toàn ngoài chu kỳ build
-      ref.read(cartNotifierProvider.notifier).clearCart();
-      ref.read(cartNoteProvider.notifier).clear();
+        // 1. Gửi đơn hàng vào hệ thống theo dõi đơn hàng thời gian thực
+        ref.read(orderTrackingNotifierProvider.notifier).addNewOrder(orderResult);
 
-      // 3. Đổi tab sang Tab Đơn hàng (index 1)
-      ref.read(mainTabIndexProvider.notifier).setTab(1);
+        // 2. Làm sạch giỏ hàng & ghi chú an toàn ngoài chu kỳ build
+        ref.read(cartNotifierProvider.notifier).clearCart();
+        ref.read(cartNoteProvider.notifier).clear();
 
-      // 4. Hiển thị thông báo thành công
-      AppSnackBar.success(context, '🎉 Đặt hàng thành công! Mã đơn: #$orderCode');
+        // 3. Đổi tab sang Tab Đơn hàng (index 1)
+        ref.read(mainTabIndexProvider.notifier).setTab(1);
 
-      // 5. Điều hướng an toàn sang màn hình Theo dõi đơn hàng
-      context.go(AppRoutes.orders);
-    });
+        // 4. Hiển thị thông báo thành công
+        AppSnackBar.success(context, '🎉 Đặt hàng thành công! Mã đơn: #${orderResult.orderCode}');
+
+        // 5. Điều hướng an toàn sang màn hình Theo dõi đơn hàng
+        context.go(AppRoutes.orders);
+      });
+    } catch (e) {
+      // TUYỆT ĐỐI KHÔNG hiển thị "Đặt hàng thành công" nếu API trả về lỗi
+      if (mounted) {
+        setState(() => _isSubmittingOrder = false);
+        final errorMessage = e is OrderException ? e.message : 'Đặt hàng thất bại: ${e.toString()}';
+        AppSnackBar.error(context, errorMessage);
+      }
+    }
   }
 }

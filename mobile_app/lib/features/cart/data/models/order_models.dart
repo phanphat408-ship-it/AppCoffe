@@ -87,6 +87,9 @@ class OrderResult {
   final String shippingAddress;
   final String paymentMethodTitle;
   final List<CartItem> items;
+  final String? driverName;
+  final String? driverPhone;
+  final String paymentStatus;
 
   const OrderResult({
     required this.orderCode,
@@ -98,5 +101,8 @@ class OrderResult {
     this.shippingAddress = '123 Hai Bà Trưng, P. Bến Nghé, Quận 1, TP.HCM',
     this.paymentMethodTitle = 'Tiền mặt (COD)',
     this.items = const [],
+    this.driverName,
+    this.driverPhone,
+    this.paymentStatus = 'Pending',
   });
 }

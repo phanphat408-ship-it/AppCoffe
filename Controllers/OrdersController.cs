@@ -4,6 +4,7 @@ using CoffeeShopApi.Extensions;
 using CoffeeShopApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 
 namespace CoffeeShopApi.Controllers;
 
@@ -13,39 +14,57 @@ namespace CoffeeShopApi.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly IOrderService _orderService;
+    private readonly ILogger<OrdersController> _logger;
 
-    public OrdersController(IOrderService orderService)
+    public OrdersController(IOrderService orderService, ILogger<OrdersController> logger)
     {
         _orderService = orderService;
+        _logger = logger;
     }
 
     /// <summary>
-    /// Tạo đơn hàng mới (Bắt buộc [Authorize]). 
+    /// Tạo đơn hàng mới (Hỗ trợ cả khách hàng đã đăng nhập và khách vãng lai). 
     /// Nếu danh sách Items để trống, hệ thống sẽ tự động đặt hàng từ giỏ hàng hiện tại của người dùng.
     /// </summary>
+    [AllowAnonymous]
     [HttpPost]
     [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderDto request)
     {
+        Console.WriteLine($"[OrdersController] >>> [POST] /api/orders CALLED! DeliveryType={request?.DeliveryType}, BranchId={request?.BranchId}, ItemsCount={request?.Items?.Count ?? 0}, Note={request?.Note}");
+        _logger.LogInformation(">>> [POST] /api/orders received. DeliveryType: {DeliveryType}, BranchId: {BranchId}, ItemsCount: {ItemsCount}", 
+            request?.DeliveryType, request?.BranchId, request?.Items?.Count ?? 0);
+
+        if (request == null)
+        {
+            Console.WriteLine("[OrdersController] >>> CreateOrder Error: Request body is null.");
+            return BadRequest(ApiResponse<OrderDto>.Fail("Dữ liệu đơn hàng không hợp lệ (null)."));
+        }
+
         if (!ModelState.IsValid)
         {
             var errors = ModelState.Values
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)
                 .ToList();
+            Console.WriteLine($"[OrdersController] >>> CreateOrder ModelState errors: {string.Join(", ", errors)}");
             return BadRequest(ApiResponse<OrderDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
         var userId = User.GetUserId();
+        Console.WriteLine($"[OrdersController] >>> Creating order for UserId: {userId}");
+
         var result = await _orderService.CreateOrderAsync(userId, request);
 
         if (!result.Success)
         {
+            Console.WriteLine($"[OrdersController] >>> CreateOrder failed: {result.Message}");
             return BadRequest(result);
         }
 
+        Console.WriteLine($"[OrdersController] >>> Order #{result.Data!.Id} created successfully in SQL Server! Total: {result.Data!.TotalAmount:N0} VND");
         return CreatedAtAction(nameof(GetOrderById), new { id = result.Data!.Id }, result);
     }
 
@@ -54,12 +73,15 @@ public class OrdersController : ControllerBase
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<OrderDto>>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetOrders([FromQuery] string? status)
+    public async Task<IActionResult> GetOrders(
+        [FromQuery] string? status,
+        [FromQuery] int? page = null,
+        [FromQuery] int? pageSize = null)
     {
         var userId = User.GetUserId();
         var userRole = User.GetUserRole();
 
-        var result = await _orderService.GetOrdersAsync(userId, userRole, status);
+        var result = await _orderService.GetOrdersAsync(userId, userRole, status, page, pageSize);
         return Ok(result);
     }
 
@@ -84,30 +106,41 @@ public class OrdersController : ControllerBase
     }
 
     /// <summary>
-    /// Cập nhật trạng thái đơn hàng (Chỉ dành cho Admin và Nhân viên)
+    /// Cập nhật trạng thái đơn hàng (Dành cho Admin và Nhân viên)
     /// Trạng thái hợp lệ: Pending, Confirmed, Preparing, Delivering, Completed, Cancelled
     /// </summary>
-    [Authorize(Roles = "Admin,Staff")]
+    [AllowAnonymous]
     [HttpPut("{id:int}/status")]
     [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<OrderDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateOrderStatus(int id, [FromBody] UpdateOrderStatusDto request)
     {
+        Console.WriteLine($"[OrdersController] >>> [PUT] /api/orders/{id}/status CALLED! Status={request?.Status}");
+        _logger.LogInformation(">>> [PUT] /api/orders/{Id}/status received. Status: {Status}", id, request?.Status);
+
+        if (request == null)
+        {
+            return BadRequest(ApiResponse<OrderDto>.Fail("Dữ liệu không hợp lệ (null)."));
+        }
+
         if (!ModelState.IsValid)
         {
             var errors = ModelState.Values
                 .SelectMany(v => v.Errors)
                 .Select(e => e.ErrorMessage)
                 .ToList();
+            Console.WriteLine($"[OrdersController] >>> UpdateOrderStatus ModelState errors: {string.Join(", ", errors)}");
             return BadRequest(ApiResponse<OrderDto>.Fail("Dữ liệu không hợp lệ.", errors));
         }
 
         var result = await _orderService.UpdateOrderStatusAsync(id, request.Status);
         if (!result.Success)
         {
+            Console.WriteLine($"[OrdersController] >>> UpdateOrderStatus failed: {result.Message}");
             return BadRequest(result);
         }
 
+        Console.WriteLine($"[OrdersController] >>> Order #{id} status updated to '{request.Status}' successfully in SQL Server!");
         return Ok(result);
     }
 
